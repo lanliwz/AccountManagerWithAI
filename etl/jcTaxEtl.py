@@ -45,7 +45,7 @@ def extract_tax_as_neo_stmt(account: str) -> list[str]:
         table_data.append(row_data)
     return to_neo4j_statement(account,table_data)
 
-def load2neo4j(account:str):
+def load2neo4j():
     from neo4j_storage.dataService import FinGraphDB
     neo4j_url=os.getenv("Neo4jFinDBUrl")
     username=os.getenv("Neo4jFinDBUserName")
@@ -54,10 +54,13 @@ def load2neo4j(account:str):
 
     mydb = FinGraphDB(neo4j_url, username, password, database)
 
-    for stmt in extract_tax_as_neo_stmt(account):
-        print(stmt)
-        mydb.create_object(stmt)
+    accounts=mydb.get_account_number()
+    for account in accounts:
+        for stmt in extract_tax_as_neo_stmt(account):
+            print(stmt)
+            mydb.create_object(stmt)
 
     mydb.create_bill_for_rel("JerseyCityTaxBilling")
     mydb.close()
 
+load2neo4j()

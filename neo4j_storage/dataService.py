@@ -16,6 +16,16 @@ class FinGraphDB:
         with self._driver.session() as session:
             session.execute_write(self._create_object, query)
 
+    def get_account_number(self):
+        with self._driver.session() as session:
+            return session.read_transaction(self._get_accounts)
+
+
+    @staticmethod
+    def _get_accounts(tx):
+            result = tx.run("MATCH (n:Account) RETURN n.Account as account_num")
+            return [record["account_num"] for record in result]
+
     @staticmethod
     def _create_node(tx, label, properties):
         # Creating a Cypher query to create a node
