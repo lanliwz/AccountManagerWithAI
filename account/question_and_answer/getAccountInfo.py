@@ -35,6 +35,11 @@ def create_qa_chain():
         WHERE toLower(a.address) STARTS WITH '100 main street' AND b.Year='2023'
         RETURN SUM(b.Billed) + SUM(b.Paid) AS AccountBalance
         
+        # find me all my billing record for year 2022 for my accunt 599600
+        MATCH (a:Account)<-[:BILL_FOR]-(b:JerseyCityTaxBilling)
+        WHERE a.Account = 599600 AND b.Year = '2022'
+        RETURN b
+        
         The question is:
         {question}"""
     )
