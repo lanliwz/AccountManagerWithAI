@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import json
 import requests
-from json2node import to_neo4j_statement
+from jcTaxJson2node import to_neo4j_statement
 import os
 
 def extract_tax_as_neo_stmt(account: str) -> list[str]:

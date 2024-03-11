@@ -1,6 +1,7 @@
 from account.question_and_answer.getAccountInfo import create_qa_chain
 def main():
     chain = create_qa_chain()
+    print(chain.graph_schema)
     while True:
         command = input(">>> ")
 
@@ -12,7 +13,7 @@ def main():
             print("help - Display this help menu")
             print("exit - Exit the prompt")
         else:
-            chain.run(command)
+            chain.invoke(command)
 
 if __name__ == "__main__":
     main()

@@ -1,9 +1,11 @@
 from langchain.prompts.prompt import PromptTemplate
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain.chains import GraphCypherQAChain
-from langchain.graphs import Neo4jGraph
+from langchain_community.graphs import Neo4jGraph
 import os, logging,sys
-
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+# logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+# ChatOpenAI.log = "info"
 def create_qa_chain():
     url=os.getenv("Neo4jFinDBUrl")
     username=os.getenv("Neo4jFinDBUserName")
@@ -35,9 +37,9 @@ def create_qa_chain():
         WHERE toLower(a.address) STARTS WITH '100 main street' AND b.Year='2023'
         RETURN SUM(b.Billed) + SUM(b.Paid) AS AccountBalance
         
-        # find me all my billing record for year 2022 for my accunt 599600
+        # find me all my billing record for year 2022 for my account 123456
         MATCH (a:Account)<-[:BILL_FOR]-(b:JerseyCityTaxBilling)
-        WHERE a.Account = 599600 AND b.Year = '2022'
+        WHERE a.Account = 123456 AND b.Year = '2022'
         RETURN b
         
         The question is:
