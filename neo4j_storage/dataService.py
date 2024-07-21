@@ -18,7 +18,7 @@ class FinGraphDB:
 
     def get_account_number(self):
         with self._driver.session() as session:
-            return session.read_transaction(self._get_accounts)
+            return session.execute_read(self._get_accounts)
 
 
     @staticmethod
