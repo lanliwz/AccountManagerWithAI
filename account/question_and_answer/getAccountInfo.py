@@ -57,7 +57,11 @@ def create_qa_chain():
     )
 
     chain = GraphCypherQAChain.from_llm(
-        ChatOpenAI(temperature=0), graph=graph, verbose=True, cypher_prompt=CYPHER_GENERATION_PROMPT
+        ChatOpenAI(temperature=0),
+        graph=graph,
+        verbose=True,
+        cypher_prompt=CYPHER_GENERATION_PROMPT,
+        allow_dangerous_requests=True
     )
 
     return chain
