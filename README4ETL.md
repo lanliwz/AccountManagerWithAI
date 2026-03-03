@@ -256,6 +256,12 @@ From the repository root:
 python etl/jcTaxEtl.py
 ```
 
+Or use the repo wrapper script:
+
+```bash
+bin/jctaxledger-etl.sh
+```
+
 This default command:
 
 - targets Neo4j database `taxjc`
@@ -268,10 +274,22 @@ To refresh only selected accounts:
 python etl/jcTaxEtl.py --accounts 123456,234567
 ```
 
+Wrapper equivalent:
+
+```bash
+bin/jctaxledger-etl.sh --accounts 123456,234567
+```
+
 To override the database explicitly:
 
 ```bash
 python etl/jcTaxEtl.py --database taxjc
+```
+
+Wrapper equivalent:
+
+```bash
+bin/jctaxledger-etl.sh --database taxjc
 ```
 
 If your interpreter does not resolve local imports from the repo root, run with explicit `PYTHONPATH`:

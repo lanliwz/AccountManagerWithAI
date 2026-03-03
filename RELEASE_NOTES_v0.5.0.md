@@ -32,6 +32,12 @@ Refresh all accounts from `taxjc`:
 jctaxledger-etl
 ```
 
+From the repo checkout without installation:
+
+```bash
+bin/jctaxledger-etl.sh
+```
+
 Refresh specific accounts:
 
 ```bash

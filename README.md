@@ -57,6 +57,12 @@ Run it with:
 jctaxledger-etl
 ```
 
+from the repo checkout without installing:
+
+```bash
+bin/jctaxledger-etl.sh
+```
+
 or directly:
 
 ```bash
