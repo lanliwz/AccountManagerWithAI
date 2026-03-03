@@ -17,11 +17,6 @@ dependencies = [
   "requests>=2.31",
 ]
 
-[project.optional-dependencies]
-ui = [
-  "PyQt6>=6.7",
-]
-
 [project.scripts]
 jctaxledger-etl = "etl.jcTaxEtl:main"
 

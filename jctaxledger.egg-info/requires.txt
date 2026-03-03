@@ -1,5 +1,2 @@
 neo4j>=5.28
 requests>=2.31
-
-[ui]
-PyQt6>=6.7

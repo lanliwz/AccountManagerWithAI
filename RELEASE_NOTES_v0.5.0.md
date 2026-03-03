@@ -24,12 +24,6 @@ From a local checkout:
 python -m pip install .
 ```
 
-Install with UI support:
-
-```bash
-python -m pip install .[ui]
-```
-
 ## CLI
 
 Refresh all accounts from `taxjc`:

@@ -7,7 +7,6 @@ Current milestone release: `v0.5.0`
 This repository currently contains three separate pieces:
 
 - A small ETL script that pulls Jersey City tax bill and payment history from the public HLS tax inquiry site and writes account metadata, billing nodes, and relationships into Neo4j.
-- A standalone PyQt6 SVG viewer utility.
 
 ## What the project does
 
@@ -17,7 +16,6 @@ The active application logic in this repository is the ETL flow in [`etl/jcTaxEt
 
 ```text
 .
-├── main_ui.py                           # PyQt6 SVG viewer
 ├── neo4j_storage/                       # Neo4j write/read helper
 └── etl/                                 # Jersey City tax scraping + graph load
 ```
@@ -30,12 +28,6 @@ Install from a local checkout:
 
 ```bash
 python -m pip install .
-```
-
-Install with UI support:
-
-```bash
-python -m pip install .[ui]
 ```
 
 If you want dependency-only installation without packaging:
@@ -95,16 +87,6 @@ This produces:
 - `dist/jctaxledger-0.5.0-py3-none-any.whl`
 
 Release notes for this milestone are in [`RELEASE_NOTES_v0.5.0.md`](/Users/weizhang/github/AccountManagerWithAI/RELEASE_NOTES_v0.5.0.md).
-
-## Running the SVG viewer
-
-The UI entry point is independent from the account-management flow:
-
-```bash
-python main_ui.py
-```
-
-It opens a file picker for an SVG file and displays the selected asset in a draggable PyQt6 widget.
 
 ## Current limitations
 
