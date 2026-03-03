@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jctaxledger"
+version = "0.5.0"
+description = "Jersey City property tax ETL and Neo4j reporting utilities."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Wei Zhang" }
+]
+dependencies = [
+  "neo4j>=5.28",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+ui = [
+  "PyQt6>=6.7",
+]
+
+[project.scripts]
+jctaxledger-etl = "etl.jcTaxEtl:main"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["etl", "neo4j_storage"]

@@ -1,3 +1,17 @@
+Metadata-Version: 2.1
+Name: jctaxledger
+Version: 0.5.0
+Summary: Jersey City property tax ETL and Neo4j reporting utilities.
+Author: Wei Zhang
+License: Apache-2.0
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: neo4j>=5.28
+Requires-Dist: requests>=2.31
+Provides-Extra: ui
+Requires-Dist: PyQt6>=6.7; extra == "ui"
+
 # JCTaxLedger
 
 JCTaxLedger is a Jersey City property tax ETL and reporting project backed by Neo4j.

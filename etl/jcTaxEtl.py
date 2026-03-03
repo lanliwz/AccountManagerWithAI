@@ -1,66 +1,137 @@
-from bs4 import BeautifulSoup
+import argparse
 from datetime import datetime
-import json
-import requests
-from jcTaxJson2node import to_neo4j_statement
 import os
 
-def extract_tax_as_neo_stmt(account: str) -> list[str]:
-    url = f"http://taxes.cityofjerseycity.com/ViewPay?accountNumber={account}"
-    html = requests.get(url).content
+import requests
 
-    # Parse the HTML
-    soup = BeautifulSoup(html, 'html.parser')
-
-    # Find the table
-    table = soup.find('table')
-
-    # Find all the rows in the table
-    rows = table.find_all('tr')
-
-    # Get the headers
-    headers_raw = [header.text.strip() for header in rows[0].find_all('th')]
-    headers = ['Due Date' if x == 'Tr. / Due Date' else x for x in headers_raw]
-
-    # Initialize an empty list to hold the row data
-    table_data = []
-
-    # Iterate over the rows
-    for row in rows[1:]:
-        row_data = {}
-        # Find all the columns in the row
-        cols = row.find_all('td')
-        for i, col in enumerate(cols):
-            text = col.text.strip()
-            # If it's the due date column, convert the text to a date
-            if headers[i] == 'Due Date':
-                text = datetime.strptime(text, "%m/%d/%Y").date()
-            # If it's the Paid column and the value is in brackets, make it negative
-            elif headers[i] == 'Paid/Adjusted' and text.startswith('($') and text.endswith(')'):
-                text = -float(text[2:-1].replace(',', '').replace('$', ''))
-            # Otherwise just clean up the text
-            elif text.startswith('$'):
-                text = float(text.replace(',', '').replace('$', ''))
-            row_data[headers[i]] = text
-        table_data.append(row_data)
-    return to_neo4j_statement(account,table_data)
-
-def load2neo4j():
+try:
     from neo4j_storage.dataService import FinGraphDB
-    neo4j_url=os.getenv("Neo4jFinDBUrl")
-    username=os.getenv("Neo4jFinDBUserName")
-    password=os.getenv("Neo4jFinDBPassword")
-    database=os.getenv("Neo4jFinDBName")
+except ImportError:
+    import sys
+    from pathlib import Path
+
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+    from neo4j_storage.dataService import FinGraphDB
+
+try:
+    from etl.jcTaxJson2node import (
+        classify_tax_rows,
+        normalize_account_properties,
+        normalize_billing_rows,
+    )
+except ImportError:
+    from jcTaxJson2node import (
+        classify_tax_rows,
+        normalize_account_properties,
+        normalize_billing_rows,
+    )
+
+
+PROPERTY_TAX_INQUIRY_URL = "https://apps.hlssystems.com/JerseyCity/PropertyTaxInquiry/GetAccountDetails"
+REQUEST_TIMEOUT_SECONDS = 30
+DEFAULT_DATABASE = "taxjc"
+
+
+def _format_interest_thru_date(target_date=None):
+    date_value = target_date or datetime.now()
+    return date_value.strftime("%a %b %d %Y")
+
+
+def fetch_account_details(session, account_number, interest_thru_date=None):
+    response = session.get(
+        PROPERTY_TAX_INQUIRY_URL,
+        params={
+            "accountNumber": str(account_number),
+            "interestThruDate": _format_interest_thru_date(interest_thru_date),
+        },
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+
+    payload = response.json()
+    if not payload.get("validAccountNumber"):
+        raise ValueError(f"Invalid account returned by source: {account_number}")
+
+    return payload["accountInquiryVM"]
+
+
+def _parse_account_list(raw_accounts):
+    if not raw_accounts:
+        return None
+
+    parsed_accounts = []
+    for value in raw_accounts.split(","):
+        account = value.strip()
+        if not account:
+            continue
+        parsed_accounts.append(int(account))
+
+    return parsed_accounts or None
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description=(
+            "Refresh Jersey City tax billing and payment data into Neo4j. "
+            "By default, this loads all Account nodes from taxjc."
+        )
+    )
+    parser.add_argument(
+        "--accounts",
+        help="Comma-separated account numbers to refresh instead of querying all accounts from Neo4j.",
+    )
+    parser.add_argument(
+        "--database",
+        default=DEFAULT_DATABASE,
+        help=f"Neo4j database to refresh. Default: {DEFAULT_DATABASE}.",
+    )
+    return parser.parse_args()
+
+
+def load2neo4j(accounts=None, database=DEFAULT_DATABASE):
+    neo4j_url = os.getenv("Neo4jFinDBUrl")
+    username = os.getenv("Neo4jFinDBUserName")
+    password = os.getenv("Neo4jFinDBPassword")
 
     mydb = FinGraphDB(neo4j_url, username, password, database)
+    accounts_to_load = accounts or mydb.get_account_number()
 
-    accounts=mydb.get_account_number()
-    for account in accounts:
-        for stmt in extract_tax_as_neo_stmt(account):
-            print(stmt)
-            mydb.create_object(stmt)
+    session = requests.Session()
+    session.headers.update(
+        {
+            "User-Agent": "JCTaxLedger ETL/1.0",
+            "Accept": "application/json",
+        }
+    )
 
-    mydb.create_bill_for_rel("JerseyCityTaxBilling")
-    mydb.close()
+    try:
+        for account in accounts_to_load:
+            account_details = fetch_account_details(session, account)
+            account_properties = normalize_account_properties(account_details)
+            tax_rows = normalize_billing_rows(account_details)
+            billing_rows, payment_rows = classify_tax_rows(tax_rows)
+            mydb.replace_account_tax_history(
+                account_properties,
+                billing_rows,
+                payment_rows,
+            )
+            print(
+                f"Loaded account {account_properties['Account']} "
+                f"(accountId={account_properties['accountId']}) with "
+                f"{len(billing_rows)} billing rows and {len(payment_rows)} payment rows"
+            )
+    finally:
+        session.close()
+        mydb.close()
 
-load2neo4j()
+
+def main():
+    args = parse_args()
+    load2neo4j(
+        accounts=_parse_account_list(args.accounts),
+        database=args.database,
+    )
+
+
+if __name__ == "__main__":
+    main()

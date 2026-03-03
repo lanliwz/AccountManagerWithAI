@@ -1,0 +1,2 @@
+[console_scripts]
+jctaxledger-etl = etl.jcTaxEtl:main

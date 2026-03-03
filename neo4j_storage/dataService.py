@@ -16,6 +16,32 @@ class FinGraphDB:
         with self._driver.session() as session:
             session.execute_write(self._create_object, query)
 
+    def run_write(self, query, params=None):
+        with self._driver.session() as session:
+            session.execute_write(self._run_query, query, params or {})
+
+    def replace_account_tax_history(self, account_properties, billing_rows, payment_rows):
+        with self._driver.session() as session:
+            session.execute_write(
+                self._upsert_account,
+                account_properties,
+            )
+            session.execute_write(self._delete_account_tax_history, account_properties["Account"])
+            if billing_rows:
+                session.execute_write(
+                    self._insert_tax_rows,
+                    "TaxBilling",
+                    "BILL_FOR",
+                    billing_rows,
+                )
+            if payment_rows:
+                session.execute_write(
+                    self._insert_tax_rows,
+                    "TaxPayment",
+                    "PAYMENT_FOR",
+                    payment_rows,
+                )
+
     def get_account_number(self):
         with self._driver.session() as session:
             return session.execute_read(self._get_accounts)
@@ -35,6 +61,10 @@ class FinGraphDB:
     @staticmethod
     def _create_object(tx, query):
         tx.run(query)
+
+    @staticmethod
+    def _run_query(tx, query, params):
+        tx.run(query, **params)
 
     def create_node_and_relationship(self, node1_label, node1_properties, relationship_type, node2_label, node2_properties):
         with self._driver.session() as session:
@@ -67,3 +97,57 @@ class FinGraphDB:
         print(query)
         tx.run(query)
 
+    @staticmethod
+    def _upsert_account(tx, account_properties):
+        tx.run(
+            """
+            MERGE (a:Account {Account: $Account})
+            SET a += $account_properties
+            """,
+            Account=account_properties["Account"],
+            account_properties=account_properties,
+        )
+
+    @staticmethod
+    def _delete_account_tax_history(tx, account_number):
+        tx.run(
+            """
+            MATCH (n)
+            WHERE n.Account = $Account
+              AND (n:JerseyCityTaxBilling OR n:TaxBilling OR n:TaxPayment)
+            DETACH DELETE n
+            """,
+            Account=account_number,
+        )
+
+    @staticmethod
+    def _insert_tax_rows(tx, node_label, relationship_type, rows):
+        if node_label == "TaxBilling" and relationship_type == "BILL_FOR":
+            tx.run(
+                """
+                UNWIND $rows AS row
+                MERGE (n:TaxBilling {sourceId: row.sourceId})
+                SET n += row
+                WITH n, row
+                MATCH (a:Account {Account: row.Account})
+                MERGE (n)-[:BILL_FOR]->(a)
+                """,
+                rows=rows,
+            )
+            return
+
+        if node_label == "TaxPayment" and relationship_type == "PAYMENT_FOR":
+            tx.run(
+                """
+                UNWIND $rows AS row
+                MERGE (n:TaxPayment {sourceId: row.sourceId})
+                SET n += row
+                WITH n, row
+                MATCH (a:Account {Account: row.Account})
+                MERGE (n)-[:PAYMENT_FOR]->(a)
+                """,
+                rows=rows,
+            )
+            return
+
+        raise ValueError(f"Unsupported tax row target: {node_label}/{relationship_type}")
