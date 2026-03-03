@@ -2,7 +2,7 @@
 
 JCTaxLedger is a Jersey City property tax ETL and reporting project backed by Neo4j.
 
-Current milestone release: `v0.5.0`
+Current milestone release: `v0.6.0`
 
 ## Purpose
 
@@ -26,7 +26,7 @@ This repository currently contains these active pieces:
 
 ## What the project does
 
-The active application logic in this repository is the ETL flow in [`etl/jcTaxEtl.py`](/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxEtl.py). It fetches structured JSON from the Jersey City HLS property tax inquiry endpoint, normalizes account metadata and tax history through [`etl/jcTaxJson2node.py`](/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxJson2node.py), and refreshes `TaxBilling`, `TaxPayment`, `BILL_FOR`, and `PAYMENT_FOR` data in Neo4j for the `taxjc` database.
+The active application logic in this repository is the ETL flow in [`etl/jcTaxEtl.py`](etl/jcTaxEtl.py). It fetches structured JSON from the Jersey City HLS property tax inquiry endpoint, normalizes account metadata and tax history through [`etl/jcTaxJson2node.py`](etl/jcTaxJson2node.py), and refreshes `TaxBilling`, `TaxPayment`, `BILL_FOR`, and `PAYMENT_FOR` data in Neo4j for the `taxjc` database.
 
 The project is designed so the account owner can then use an agent and the repo skills to work with that graph in higher-level ways, such as producing ledger reports, checking balances, analyzing tax increases, and preparing reminder-oriented workflows.
 
@@ -107,17 +107,17 @@ python -m build
 
 This produces:
 
-- `dist/jctaxledger-0.5.0.tar.gz`
-- `dist/jctaxledger-0.5.0-py3-none-any.whl`
+- `dist/jctaxledger-0.6.0.tar.gz`
+- `dist/jctaxledger-0.6.0-py3-none-any.whl`
 
-Release notes for this milestone are in [`RELEASE_NOTES_v0.5.0.md`](/Users/weizhang/github/AccountManagerWithAI/RELEASE_NOTES_v0.5.0.md).
+Release notes for this milestone are in [`RELEASE_NOTES_v0.6.0.md`](RELEASE_NOTES_v0.6.0.md).
 
 ## Skills
 
-The repo includes local skills under [`/Users/weizhang/github/AccountManagerWithAI/skills`](/Users/weizhang/github/AccountManagerWithAI/skills):
+The repo includes local skills under [`skills/`](skills/):
 
-- [`/Users/weizhang/github/AccountManagerWithAI/skills/taxjc-etl/SKILL.md`](/Users/weizhang/github/AccountManagerWithAI/skills/taxjc-etl/SKILL.md)
-- [`/Users/weizhang/github/AccountManagerWithAI/skills/taxjc-reporting/SKILL.md`](/Users/weizhang/github/AccountManagerWithAI/skills/taxjc-reporting/SKILL.md)
+- [`skills/taxjc-etl/SKILL.md`](skills/taxjc-etl/SKILL.md)
+- [`skills/taxjc-reporting/SKILL.md`](skills/taxjc-reporting/SKILL.md)
 
 These skills are meant to be used by an agent on behalf of the account owner.
 
@@ -128,7 +128,7 @@ As the project grows, additional skills can cover reminders, alerts, owner-facin
 
 Supporting query examples live in:
 
-- [`/Users/weizhang/github/AccountManagerWithAI/skills/taxjc-reporting/references/report-queries.md`](/Users/weizhang/github/AccountManagerWithAI/skills/taxjc-reporting/references/report-queries.md)
+- [`skills/taxjc-reporting/references/report-queries.md`](skills/taxjc-reporting/references/report-queries.md)
 
 ## Tax Ledger Report
 
@@ -175,4 +175,4 @@ Recommended report sections:
 
 ## License
 
-Apache License 2.0. See [`LICENSE`](/Users/weizhang/github/AccountManagerWithAI/LICENSE).
+Apache License 2.0. See [`LICENSE`](LICENSE).

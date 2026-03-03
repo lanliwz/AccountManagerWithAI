@@ -6,9 +6,9 @@ This document describes the current Jersey City tax ETL implemented in this repo
 
 The ETL code lives in:
 
-- [`/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxEtl.py`](/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxEtl.py)
-- [`/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxJson2node.py`](/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxJson2node.py)
-- [`/Users/weizhang/github/AccountManagerWithAI/neo4j_storage/dataService.py`](/Users/weizhang/github/AccountManagerWithAI/neo4j_storage/dataService.py)
+- [`etl/jcTaxEtl.py`](etl/jcTaxEtl.py)
+- [`etl/jcTaxJson2node.py`](etl/jcTaxJson2node.py)
+- [`neo4j_storage/dataService.py`](neo4j_storage/dataService.py)
 
 Its job is to fetch property tax account details from the Jersey City HLS site, normalize bill and payment history into graph properties, update `Account` metadata, and refresh `TaxBilling` and `TaxPayment` rows in Neo4j.
 
@@ -295,19 +295,19 @@ bin/jctaxledger-etl.sh --database taxjc
 If your interpreter does not resolve local imports from the repo root, run with explicit `PYTHONPATH`:
 
 ```bash
-PYTHONPATH=/Users/weizhang/github/AccountManagerWithAI python etl/jcTaxEtl.py
+PYTHONPATH=. python etl/jcTaxEtl.py
 ```
 
 To force the target database:
 
 ```bash
-Neo4jFinDBName=taxjc PYTHONPATH=/Users/weizhang/github/AccountManagerWithAI python etl/jcTaxEtl.py
+Neo4jFinDBName=taxjc PYTHONPATH=. python etl/jcTaxEtl.py
 ```
 
 To combine both:
 
 ```bash
-PYTHONPATH=/Users/weizhang/github/AccountManagerWithAI python etl/jcTaxEtl.py --database taxjc --accounts 123456,234567
+PYTHONPATH=. python etl/jcTaxEtl.py --database taxjc --accounts 123456,234567
 ```
 
 ## Inputs and Outputs
