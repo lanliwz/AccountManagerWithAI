@@ -3,12 +3,14 @@
 This document describes the current Jersey City tax ETL implemented in this repository.
 
 This file is part of the required workflow for ETL maintenance. If the ETL architecture or major logic changes, update this document together with `README.md` in the same change.
+Do not use real account numbers, addresses, owner names, or other live sensitive examples in this document. Use placeholders in all public-facing examples.
 
 ## Scope
 
 The ETL code lives in:
 
 - [`etl/jcTaxEtl.py`](etl/jcTaxEtl.py)
+- [`etl/diffLedgerSnapshots.py`](etl/diffLedgerSnapshots.py)
 - [`etl/jcTaxJson2node.py`](etl/jcTaxJson2node.py)
 - [`etl/verifyLedgerChain.py`](etl/verifyLedgerChain.py)
 - [`neo4j_storage/dataService.py`](neo4j_storage/dataService.py)
@@ -217,6 +219,19 @@ Main responsibilities:
 
 It exits non-zero when the chain is inconsistent.
 
+### `etl/diffLedgerSnapshots.py`
+
+Main responsibilities:
+
+- choose two blocks to compare per account
+- default to the latest two blocks when block IDs are not provided
+- compare `sourceHash` between snapshots
+- report rows added in the newer snapshot
+- report rows removed in the newer snapshot
+- report rows with the same `sourceId` but changed fields
+
+It supports both text and JSON output.
+
 ### `neo4j_storage/dataService.py`
 
 Main responsibilities:
@@ -421,6 +436,18 @@ Wrapper equivalent:
 bin/jctaxledger-etl.sh --database taxjc
 ```
 
+To diff the latest two snapshots per account:
+
+```bash
+python etl/diffLedgerSnapshots.py --database taxjc
+```
+
+Wrapper equivalent:
+
+```bash
+bin/jctaxledger-diff-ledger.sh --database taxjc
+```
+
 If your interpreter does not resolve local imports from the repo root, run with explicit `PYTHONPATH`:
 
 ```bash
@@ -491,6 +518,18 @@ RETURN a.Account AS account,
          ELSE 'CHANGED'
        END AS sourceChangeStatus
 ORDER BY account, blockHeight
+```
+
+The snapshot diff CLI gives the same workflow without requiring manual Cypher:
+
+```bash
+bin/jctaxledger-diff-ledger.sh --database taxjc --accounts 123456,234567
+```
+
+To compare a specific block pair:
+
+```bash
+bin/jctaxledger-diff-ledger.sh --database taxjc --old-block-id <oldBlockId> --new-block-id <newBlockId>
 ```
 
 ## Inputs and Outputs

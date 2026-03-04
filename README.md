@@ -65,10 +65,23 @@ The `TaxBilling` and `TaxPayment` nodes remain in the graph as compatibility pro
 
 - Python 3.10+ recommended
 - A running Neo4j database populated with `Account` nodes
+
 Install from a local checkout:
 
 ```bash
 python -m pip install .
+```
+
+Install from the rebuilt `v0.7.0` wheel:
+
+```bash
+python -m pip install --upgrade dist/jctaxledger-0.7.0-py3-none-any.whl
+```
+
+If a newly added CLI command is not found in your shell, reinstall the package so the new console script entry points are registered:
+
+```bash
+python -m pip install --upgrade .
 ```
 
 If you want dependency-only installation without packaging:
@@ -147,12 +160,59 @@ The verifier checks:
 - `entryCount` matches the actual number of `LedgerEntry` links
 - stored `blockHash` matches the recomputed value
 
+## Snapshot Diff
+
+Use the diff CLI to compare two ledger snapshots and identify what changed between runs.
+
+Latest two blocks per account:
+
+```bash
+jctaxledger-diff-ledger --database taxjc
+```
+
+Repo wrapper:
+
+```bash
+bin/jctaxledger-diff-ledger.sh --database taxjc
+```
+
+Specific accounts:
+
+```bash
+jctaxledger-diff-ledger --database taxjc --accounts 123456,234567
+```
+
+Specific block pair:
+
+```bash
+jctaxledger-diff-ledger --database taxjc --old-block-id <oldBlockId> --new-block-id <newBlockId>
+```
+
+JSON output:
+
+```bash
+jctaxledger-diff-ledger --database taxjc --format json
+```
+
+The diff report highlights:
+
+- whether `sourceHash` changed
+- rows added in the newer snapshot
+- rows removed in the newer snapshot
+- rows present in both snapshots but with changed fields
+
 ## Packaging
 
 Build release artifacts locally with:
 
 ```bash
 python -m build
+```
+
+If isolated builds cannot download dependencies in a restricted environment, use the local toolchain instead:
+
+```bash
+python -m build --no-isolation
 ```
 
 This produces:
@@ -190,6 +250,7 @@ At minimum:
 
 - update `README.md` when the top-level architecture, ledger model, CLI surface, or workflow changes
 - update `README4ETL.md` when the ETL flow, data model, verification process, or operational behavior changes
+- do not use real account numbers, addresses, owner names, or other sensitive live examples in public-facing repo documents; use placeholders instead
 
 This rule is especially important for ledger, blockchain-style, schema, and reporting-model changes, because stale documentation makes verification and maintenance much harder.
 

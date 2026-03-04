@@ -1,2 +1,4 @@
 [console_scripts]
+jctaxledger-diff-ledger = etl.diffLedgerSnapshots:main
 jctaxledger-etl = etl.jcTaxEtl:main
+jctaxledger-verify-ledger = etl.verifyLedgerChain:main

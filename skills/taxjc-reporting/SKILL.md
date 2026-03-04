@@ -26,6 +26,8 @@ description: Use when answering reporting questions over the `taxjc` Neo4j datab
    - payment-only questions: query `TaxPayment`
    - balance questions: sum billing and payments separately, then combine
    - run-vs-run comparison questions: compare each `LedgerBlock.sourceHash` to the previous block for the same account
+   - exact snapshot diff questions: prefer the `jctaxledger-diff-ledger` CLI over ad hoc Cypher
+   - if the packaged CLI is not installed yet, use `bin/jctaxledger-diff-ledger.sh`
 4. Be careful with joins.
    - For combined billing/payment answers, prefer subqueries or separate aggregations per account/year to avoid row multiplication.
    - For ledger answers, anchor on one block per account/height before expanding to entries.
@@ -33,6 +35,7 @@ description: Use when answering reporting questions over the `taxjc` Neo4j datab
    - 2026 currently looks partial in the source feed.
 6. Round currency values to cents in the returned result.
 7. If the reporting model or architecture description changes materially, update `README.md` and any relevant reference docs in the same change.
+8. In public-facing docs and examples, use placeholders rather than real account identifiers or addresses.
 
 ## Guardrails
 - If a result changed after ETL, mention that the source now includes detailed bill and payment history rather than the old summarized model.
@@ -40,6 +43,8 @@ description: Use when answering reporting questions over the `taxjc` Neo4j datab
 - If a query needs examples, read `references/report-queries.md`.
 - Be explicit when a ledger answer is about ETL runs rather than tax economics. A new block can be appended even when `sourceHash` is unchanged.
 - Do not introduce a new reporting model or ledger interpretation without updating the top-level docs that describe it.
+- Do not treat a missing shell command as a missing feature until you check whether the repo wrapper exists or the package just needs reinstalling.
+- Do not copy real account numbers, addresses, or owner names into public repo documentation or release notes.
 
 ## References
 - Read `references/report-queries.md` for common query patterns used in this repo.

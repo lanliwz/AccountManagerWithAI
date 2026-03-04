@@ -62,6 +62,8 @@ Refresh specific accounts:
 jctaxledger-etl --accounts 123456,234567
 ```
 
+Use placeholder account numbers in release notes and public docs. Do not publish real account examples.
+
 Use a different database:
 
 ```bash

@@ -19,6 +19,7 @@ dependencies = [
 
 [project.scripts]
 jctaxledger-etl = "etl.jcTaxEtl:main"
+jctaxledger-diff-ledger = "etl.diffLedgerSnapshots:main"
 jctaxledger-verify-ledger = "etl.verifyLedgerChain:main"
 
 [tool.setuptools]

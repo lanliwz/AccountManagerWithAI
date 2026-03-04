@@ -2,8 +2,10 @@ LICENSE
 README.md
 pyproject.toml
 etl/__init__.py
+etl/diffLedgerSnapshots.py
 etl/jcTaxEtl.py
 etl/jcTaxJson2node.py
+etl/verifyLedgerChain.py
 jctaxledger.egg-info/PKG-INFO
 jctaxledger.egg-info/SOURCES.txt
 jctaxledger.egg-info/dependency_links.txt
