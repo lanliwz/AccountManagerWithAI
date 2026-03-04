@@ -1,9 +1,9 @@
 # TaxJC ETL Runbook
 
 ## Files
-- `/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxEtl.py`
-- `/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxJson2node.py`
-- `/Users/weizhang/github/AccountManagerWithAI/neo4j_storage/dataService.py`
+- `etl/jcTaxEtl.py`
+- `etl/jcTaxJson2node.py`
+- `neo4j_storage/dataService.py`
 
 ## Source
 Current landing page:
@@ -39,14 +39,14 @@ bin/jctaxledger-etl.sh --accounts 123456,234567
 Direct Python equivalent:
 
 ```bash
-Neo4jFinDBName=taxjc PYTHONPATH=/Users/weizhang/github/AccountManagerWithAI /opt/anaconda3/bin/python3 /Users/weizhang/github/AccountManagerWithAI/etl/jcTaxEtl.py
+Neo4jFinDBName=taxjc PYTHONPATH=. /opt/anaconda3/bin/python3 etl/jcTaxEtl.py
 ```
 
 ## Basic compile check
 ```bash
-/opt/anaconda3/bin/python3 -m py_compile /Users/weizhang/github/AccountManagerWithAI/etl/jcTaxEtl.py
-/opt/anaconda3/bin/python3 -m py_compile /Users/weizhang/github/AccountManagerWithAI/etl/jcTaxJson2node.py
-/opt/anaconda3/bin/python3 -m py_compile /Users/weizhang/github/AccountManagerWithAI/neo4j_storage/dataService.py
+/opt/anaconda3/bin/python3 -m py_compile etl/jcTaxEtl.py
+/opt/anaconda3/bin/python3 -m py_compile etl/jcTaxJson2node.py
+/opt/anaconda3/bin/python3 -m py_compile neo4j_storage/dataService.py
 ```
 
 ## Verification queries

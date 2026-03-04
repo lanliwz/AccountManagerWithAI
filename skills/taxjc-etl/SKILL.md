@@ -19,9 +19,9 @@ description: Use when refreshing, rewriting, or validating the Jersey City tax E
    - The current source is the HLS endpoint described in `references/etl-runbook.md`.
    - Prefer checking the actual response shape with a real account over assuming fields are stable.
 3. Read only the files you need:
-   - `/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxEtl.py`
-   - `/Users/weizhang/github/AccountManagerWithAI/etl/jcTaxJson2node.py`
-   - `/Users/weizhang/github/AccountManagerWithAI/neo4j_storage/dataService.py`
+   - `etl/jcTaxEtl.py`
+   - `etl/jcTaxJson2node.py`
+   - `neo4j_storage/dataService.py`
 4. Make ETL changes with these constraints:
    - Keep loads idempotent at the account-refresh level.
    - Upsert `Account` metadata first, then replace per-account tax history.
