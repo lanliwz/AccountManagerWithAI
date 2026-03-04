@@ -2,15 +2,40 @@
 
 This document describes the current Jersey City tax ETL implemented in this repository.
 
+This file is part of the required workflow for ETL maintenance. If the ETL architecture or major logic changes, update this document together with `README.md` in the same change.
+
 ## Scope
 
 The ETL code lives in:
 
 - [`etl/jcTaxEtl.py`](etl/jcTaxEtl.py)
 - [`etl/jcTaxJson2node.py`](etl/jcTaxJson2node.py)
+- [`etl/verifyLedgerChain.py`](etl/verifyLedgerChain.py)
 - [`neo4j_storage/dataService.py`](neo4j_storage/dataService.py)
 
-Its job is to fetch property tax account details from the Jersey City HLS site, normalize bill and payment history into graph properties, update `Account` metadata, and refresh `TaxBilling` and `TaxPayment` rows in Neo4j.
+Its job is to fetch property tax account details from the Jersey City HLS site, normalize the source into an append-only blockchain-style ledger, update `Account` metadata, and refresh the compatibility projection in `TaxBilling` and `TaxPayment`.
+
+## ETL Architecture
+
+The ETL has two outputs:
+
+1. The system of record:
+   - `LedgerBlock`
+   - `LedgerEntry`
+2. The reporting projection:
+   - `TaxBilling`
+   - `TaxPayment`
+
+The ledger is append-only. Each ETL run creates one `LedgerBlock` per account and links it to the prior block for that same account through `PREVIOUS_BLOCK`.
+
+The projection is refresh-oriented. `TaxBilling` and `TaxPayment` are rebuilt from the latest source snapshot so existing reporting continues to work.
+
+This split exists for a reason:
+
+- the ledger preserves every ETL run as historical evidence
+- the projection keeps simple billing and payment reports fast and familiar
+- `sourceHash` lets you tell whether a new ETL run actually changed the source payload
+- `blockHash` and `prevHash` let you verify the ledger chain over time
 
 ## Source System
 
@@ -57,15 +82,19 @@ The ETL executes this sequence:
 MATCH (n:Account) RETURN n.Account as account_num
 ```
 
-3. For each account number, call the HLS detail endpoint.
-4. Normalize account metadata into a single `Account` property map.
-5. Normalize each source detail row into a tax history property map.
-6. Upsert the `Account` node.
-7. Delete that account's existing tax history nodes.
-8. Insert refreshed `TaxBilling` and `TaxPayment` rows.
-9. Recreate `(:TaxBilling)-[:BILL_FOR]->(:Account)` and `(:TaxPayment)-[:PAYMENT_FOR]->(:Account)` relationships.
+3. Generate one ETL-level `runId` and `loadedAt` timestamp.
+4. For each account number, call the HLS detail endpoint.
+5. Normalize account metadata into a single `Account` property map.
+6. Normalize each source detail row into a tax history property map.
+7. Classify normalized rows into billing-like and payment-like sets.
+8. Compute `sourceHash` for the full source payload.
+9. Build one run-based `LedgerBlock` for that account.
+10. Build immutable `LedgerEntry` rows for the block.
+11. Upsert the `Account` node.
+12. Append the `LedgerBlock`, `LedgerEntry`, `LEDGER_FOR`, `CONTAINS`, `FOR_ACCOUNT`, and `PREVIOUS_BLOCK` relationships.
+13. Replace that account's `TaxBilling` and `TaxPayment` projection rows.
 
-The ETL refreshes history per account, not as an append-only load.
+The ledger is append-only. The projection is replace-on-refresh.
 
 ## How the Code Is Structured
 
@@ -75,8 +104,9 @@ Main responsibilities:
 
 - build the `interestThruDate` request parameter
 - fetch `accountInquiryVM` JSON for each account number
+- generate run metadata
 - normalize data through helper functions
-- refresh Neo4j for each account
+- write ledger history and projection rows to Neo4j
 
 Current source endpoint constant:
 
@@ -91,6 +121,7 @@ Important behavior:
 - default CLI behavior refreshes all `Account` nodes from the `taxjc` database
 - `--accounts` accepts a comma-separated list for partial refreshes
 - `--database` overrides the target Neo4j database
+- one ETL invocation generates one `runId`, reused across all accounts loaded in that run
 
 ### `etl/jcTaxJson2node.py`
 
@@ -99,6 +130,9 @@ Main responsibilities:
 - normalize account-level source fields
 - build a normalized `taxAccountId`
 - normalize source detail rows into graph property maps
+- build `sourceHash`
+- build run-based `LedgerBlock` properties
+- build immutable `LedgerEntry` properties
 
 Account properties currently written include:
 
@@ -117,32 +151,71 @@ Account properties currently written include:
 - `totalDue`
 - `updatedFromSource`
 
-Tax row properties currently written include:
+Ledger block properties currently written include:
 
-- `sourceId`
+- `blockId`
 - `Account`
-- `AccountId`
-- `Year`
-- `Qtr`
-- `DueDate`
-- `TransactionDate`
-- `Description`
-- `Type`
-- `Billed`
-- `Paid`
-- `Adjusted`
-- `OpenBalance`
-- `InterestDue`
-- `Days`
-- `BillSequence`
-- `TransactionId`
-- `TransCode`
-- `DepositNumber`
-- `SortCode`
-- `PaymentSourceDescription`
-- `CheckNumber`
-- `CreatedBy`
-- `PaidBy` when present
+- `accountId`
+- `chainScope`
+- `sourceSystem`
+- `runId`
+- `sourceHash`
+- `entryCount`
+- `createdAt`
+- `ledgerVersion`
+- `prevHash`
+- `blockHeight`
+- `blockHash`
+
+Ledger entry properties currently written include:
+
+- `entryId`
+- `entryHash`
+- `blockId`
+- `eventType`
+- `ordinal`
+- `createdAt`
+- `ledgerVersion`
+- plus the normalized source row fields such as:
+  - `sourceId`
+  - `Account`
+  - `AccountId`
+  - `Year`
+  - `Qtr`
+  - `DueDate`
+  - `TransactionDate`
+  - `Description`
+  - `Type`
+  - `Billed`
+  - `Paid`
+  - `Adjusted`
+  - `OpenBalance`
+  - `InterestDue`
+  - `Days`
+  - `BillSequence`
+  - `TransactionId`
+  - `TransCode`
+  - `DepositNumber`
+  - `SortCode`
+  - `PaymentSourceDescription`
+  - `CheckNumber`
+  - `CreatedBy`
+  - `PaidBy` when present
+
+Projection row properties currently written include the same normalized tax row fields in `TaxBilling` and `TaxPayment`.
+
+### `etl/verifyLedgerChain.py`
+
+Main responsibilities:
+
+- read ledger blocks by account from Neo4j
+- recompute expected `blockHash`
+- verify `blockHeight`
+- verify `prevHash`
+- verify `PREVIOUS_BLOCK`
+- verify `entryCount` against the actual `CONTAINS` relationships
+
+It exits non-zero when the chain is inconsistent.
 
 ### `neo4j_storage/dataService.py`
 
@@ -151,13 +224,15 @@ Main responsibilities:
 - manage the Neo4j driver
 - read account numbers
 - upsert `Account` metadata
-- replace tax history for one account at a time
+- append ledger history for one account at a time
+- replace projection rows for one account at a time
 
-The refresh is split into separate writes:
+The write path is split into separate concerns:
 
 1. upsert `Account`
-2. delete existing tax history rows for that account
-3. insert refreshed `TaxBilling` and `TaxPayment` rows with their relationships
+2. append `LedgerBlock` and `LedgerEntry`
+3. link the block to the prior block when one exists
+4. replace projection rows in `TaxBilling` and `TaxPayment`
 
 ## Current Graph Model
 
@@ -174,6 +249,42 @@ The ETL writes this shape:
   principal,
   interest,
   totalDue,
+  ...
+})
+
+(:LedgerBlock {
+  blockId,
+  Account,
+  accountId,
+  runId,
+  sourceHash,
+  createdAt,
+  entryCount,
+  blockHeight,
+  prevHash,
+  blockHash,
+  ...
+})
+
+(:LedgerEntry {
+  entryId,
+  entryHash,
+  blockId,
+  eventType,
+  ordinal,
+  Account,
+  AccountId,
+  Year,
+  Qtr,
+  DueDate,
+  TransactionDate,
+  Description,
+  Type,
+  Billed,
+  Paid,
+  Adjusted,
+  OpenBalance,
+  InterestDue,
   ...
 })
 
@@ -211,18 +322,35 @@ The ETL writes this shape:
   ...
 })
 
+(:LedgerBlock)-[:LEDGER_FOR]->(:Account)
+(:LedgerBlock)-[:CONTAINS]->(:LedgerEntry)
+(:LedgerBlock)-[:PREVIOUS_BLOCK]->(:LedgerBlock)
+(:LedgerEntry)-[:FOR_ACCOUNT]->(:Account)
 (:TaxBilling)-[:BILL_FOR]->(:Account)
 (:TaxPayment)-[:PAYMENT_FOR]->(:Account)
 ```
 
 Join key:
 
+- `Account.Account = LedgerBlock.Account`
+- `Account.Account = LedgerEntry.Account`
 - `Account.Account = TaxBilling.Account`
 - `Account.Account = TaxPayment.Account`
 
 ## Important Constraint Behavior
 
-The old `JerseyCityTaxBilling` constraint and related stale indexes were removed from `taxjc` after the model was split into `TaxBilling` and `TaxPayment`.
+The old `JerseyCityTaxBilling` constraint and related stale indexes were removed after the model was split into `TaxBilling` and `TaxPayment`.
+
+The active model now also depends on ledger labels and relationships:
+
+- `LedgerBlock`
+- `LedgerEntry`
+- `LEDGER_FOR`
+- `CONTAINS`
+- `PREVIOUS_BLOCK`
+- `FOR_ACCOUNT`
+
+If you clean schema objects, confirm they are stale before removing them.
 
 ## Runtime Prerequisites
 
@@ -266,7 +394,8 @@ This default command:
 
 - targets Neo4j database `taxjc`
 - queries `Account` nodes from that database
-- refreshes billing and payment history for every returned account
+- appends one ledger block per account for the current ETL run
+- refreshes the billing and payment projection for every returned account
 
 To refresh only selected accounts:
 
@@ -310,6 +439,60 @@ To combine both:
 PYTHONPATH=. python etl/jcTaxEtl.py --database taxjc --accounts 123456,234567
 ```
 
+## How To Verify
+
+Run the ledger verifier after ETL:
+
+```bash
+python etl/verifyLedgerChain.py --database taxjc
+```
+
+Wrapper equivalent:
+
+```bash
+bin/jctaxledger-verify-ledger.sh --database taxjc
+```
+
+The verifier checks:
+
+- block heights are contiguous per account
+- `PREVIOUS_BLOCK` points to the expected prior block
+- `prevHash` matches the prior block hash
+- `entryCount` equals the actual linked entry count
+- stored `blockHash` equals the recomputed hash
+
+Useful chain inspection query:
+
+```cypher
+MATCH (b:LedgerBlock)-[:LEDGER_FOR]->(a:Account)
+OPTIONAL MATCH (b)-[:PREVIOUS_BLOCK]->(prev:LedgerBlock)
+RETURN a.Account AS account,
+       b.blockHeight AS blockHeight,
+       b.runId AS runId,
+       b.blockId AS blockId,
+       b.sourceHash AS sourceHash,
+       prev.blockId AS previousBlockId
+ORDER BY account, blockHeight
+```
+
+Useful run-to-run source change query:
+
+```cypher
+MATCH (b:LedgerBlock)-[:LEDGER_FOR]->(a:Account)
+OPTIONAL MATCH (b)-[:PREVIOUS_BLOCK]->(prev:LedgerBlock)
+RETURN a.Account AS account,
+       b.blockHeight AS blockHeight,
+       b.runId AS runId,
+       b.sourceHash AS sourceHash,
+       prev.sourceHash AS previousSourceHash,
+       CASE
+         WHEN prev IS NULL THEN null
+         WHEN b.sourceHash = prev.sourceHash THEN 'UNCHANGED'
+         ELSE 'CHANGED'
+       END AS sourceChangeStatus
+ORDER BY account, blockHeight
+```
+
 ## Inputs and Outputs
 
 Input from Neo4j:
@@ -324,22 +507,32 @@ Input from the remote site:
 Output written to Neo4j:
 
 - refreshed `Account` metadata
+- appended `LedgerBlock` rows for each account-run
+- appended `LedgerEntry` rows for each account-run
+- appended `LEDGER_FOR`, `CONTAINS`, `PREVIOUS_BLOCK`, and `FOR_ACCOUNT` relationships
 - refreshed `TaxBilling` rows for each account
 - refreshed `TaxPayment` rows for each account
 - refreshed `BILL_FOR` and `PAYMENT_FOR` relationships
 
 ## Idempotency Characteristics
 
-The ETL is mostly refresh-oriented.
+The ETL is now split into two different behaviors.
 
-What is stable across reruns:
+Append-only behavior:
 
-- rerunning the ETL for the same source state should converge on the same account metadata and billing rows
-- old billing rows for an account are deleted before the refreshed rows are inserted
+- each ETL run appends a new ledger block per account
+- repeated runs are preserved even if the underlying source payload is unchanged
+- the same `sourceHash` across consecutive blocks means the source snapshot did not change
+
+Refresh behavior:
+
+- `TaxBilling` and `TaxPayment` are replaced per account on each refresh
+- rerunning the ETL for the same source state should converge on the same projection rows
 
 What is not fully lossless:
 
 - the billing/payment split is classification-based and depends on current HLS row semantics
+- current reporting still depends heavily on the projection, not only the ledger
 
 ## Operational Risks
 
@@ -349,13 +542,17 @@ These are the main ETL risks in the current implementation:
 - it refreshes one account at a time and does not checkpoint progress
 - if the HLS response shape changes, normalization code will need to be updated
 - if HLS changes the meaning of row descriptions or `Type`, the billing/payment split rule may need to be updated
+- repeated ETL runs increase ledger history size, which is intended but requires monitoring over time
 
 ## Verified Current Load Shape
 
-After the live refresh into `taxjc`, the current observed data shape is:
+The current observed test load shape includes:
 
-- graph total: `340` `TaxBilling` nodes and `404` `TaxPayment` nodes
-- year coverage: `2005` through `2026`
+- `Account`
+- `LedgerBlock`
+- `LedgerEntry`
+- `TaxBilling`
+- `TaxPayment`
 
 For command examples in this document, account numbers such as `123456` and `234567` are fake placeholders.
 
@@ -365,4 +562,5 @@ If this ETL is going to be used repeatedly, these changes should come first:
 
 1. Add retries, logging, and partial-failure reporting around the HLS requests.
 2. Add tests for source normalization using captured endpoint payloads.
-3. Make the billing/payment classification rule explicit in tests so future source changes are caught quickly.
+3. Add tests for ledger verification and multi-run chain progression.
+4. Move more reporting from `TaxBilling`/`TaxPayment` onto ledger-native queries and projections.

@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: jctaxledger
-Version: 0.6.0
+Version: 0.7.0
 Summary: Jersey City property tax ETL and Neo4j reporting utilities.
 Author: Wei Zhang
 License: Apache-2.0
@@ -14,7 +14,7 @@ Requires-Dist: requests>=2.31
 
 JCTaxLedger is a Jersey City property tax ETL and reporting project backed by Neo4j.
 
-Current milestone release: `v0.6.0`
+Current milestone release: `v0.7.0`
 
 ## Purpose
 
@@ -119,10 +119,10 @@ python -m build
 
 This produces:
 
-- `dist/jctaxledger-0.6.0.tar.gz`
-- `dist/jctaxledger-0.6.0-py3-none-any.whl`
+- `dist/jctaxledger-0.7.0.tar.gz`
+- `dist/jctaxledger-0.7.0-py3-none-any.whl`
 
-Release notes for this milestone are in [`RELEASE_NOTES_v0.6.0.md`](RELEASE_NOTES_v0.6.0.md).
+Release notes for this milestone are in [`RELEASE_NOTES_v0.7.0.md`](RELEASE_NOTES_v0.7.0.md).
 
 ## Skills
 

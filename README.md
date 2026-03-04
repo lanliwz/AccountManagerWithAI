@@ -1,34 +1,57 @@
 # JCTaxLedger
 
-JCTaxLedger is a Jersey City property tax ETL and reporting project backed by Neo4j.
+JCTaxLedger is a Jersey City property tax ETL, reporting, and blockchain-style ledger project backed by Neo4j.
 
-Current milestone release: `v0.6.0`
+Current milestone release: `v0.7.0`
 
 ## Purpose
 
-The purpose of JCTaxLedger is to extract Jersey City, New Jersey property tax billing and payment data for individual accounts, load that history into a Neo4j graph database, and make it easy for the account owner to track and manage the account over time.
+The purpose of JCTaxLedger is to extract Jersey City, New Jersey property tax billing and payment data for individual accounts, load that history into Neo4j as an append-only ledger, and make it easy for the account owner to track and manage the account over time.
 
 The intended workflow is:
 
 1. Pull billing and payment history for one or more Jersey City property tax accounts from the public HLS tax system.
-2. Load that data into Neo4j as `Account`, `TaxBilling`, and `TaxPayment` nodes with graph relationships.
-3. Let the account owner query the graph in natural language to:
+2. Write each ETL refresh into Neo4j as immutable `LedgerBlock` and `LedgerEntry` records linked to the account.
+3. Project the latest source snapshot into `TaxBilling` and `TaxPayment` nodes for compatibility with current reporting.
+4. Let the account owner query the graph in natural language to:
    - track billing and payment activity
    - check current and historical balance
    - monitor year-over-year tax increases
-   - create alerts or reminders for upcoming payments
    - investigate changes after a refresh
-4. Use project skills so an agent can help the account owner perform ETL, reporting, ledger creation, and follow-up workflows consistently.
+   - verify the integrity of the ledger chain over time
+5. Use project skills so an agent can help the account owner perform ETL, reporting, ledger verification, and follow-up workflows consistently.
 
 This repository currently contains these active pieces:
 
-- A small ETL script that pulls Jersey City tax bill and payment history from the public HLS tax inquiry site and writes account metadata, billing nodes, and relationships into Neo4j.
+- An ETL script that pulls Jersey City tax bill and payment history from the public HLS tax inquiry site, appends immutable ledger blocks and entries into Neo4j, and refreshes compatibility projections for current reporting.
 
 ## What the project does
 
-The active application logic in this repository is the ETL flow in [`etl/jcTaxEtl.py`](etl/jcTaxEtl.py). It fetches structured JSON from the Jersey City HLS property tax inquiry endpoint, normalizes account metadata and tax history through [`etl/jcTaxJson2node.py`](etl/jcTaxJson2node.py), and refreshes `TaxBilling`, `TaxPayment`, `BILL_FOR`, and `PAYMENT_FOR` data in Neo4j for the `taxjc` database.
+The active application logic in this repository is the ETL flow in [`etl/jcTaxEtl.py`](etl/jcTaxEtl.py). It fetches structured JSON from the Jersey City HLS property tax inquiry endpoint, normalizes account metadata and tax history through [`etl/jcTaxJson2node.py`](etl/jcTaxJson2node.py), appends run-based `LedgerBlock` and `LedgerEntry` history, and refreshes the `TaxBilling` and `TaxPayment` compatibility projection in Neo4j.
 
-The project is designed so the account owner can then use an agent and the repo skills to work with that graph in higher-level ways, such as producing ledger reports, checking balances, analyzing tax increases, and preparing reminder-oriented workflows.
+The project is designed so the account owner can then use an agent and the repo skills to work with that graph in higher-level ways, such as producing ledger reports, checking balances, analyzing tax increases, explaining what changed between ETL runs, and verifying the chain itself.
+
+## Why the Blockchain Model Matters
+
+JCTaxLedger uses the useful parts of blockchain design without requiring a distributed network or cryptocurrency.
+
+Each ETL run appends a new `LedgerBlock` for each account. Each block stores:
+
+- `runId` and `createdAt` so every refresh is preserved as a historical event
+- `sourceHash` so unchanged versus changed source snapshots can be detected
+- `blockHash`, `prevHash`, and `blockHeight` so the chain can be verified
+- `LedgerEntry` records for the underlying bill and payment events included in that run
+
+This matters because property tax data is not only about the latest balance. It is also about proving what the source said at a given time, understanding what changed between refreshes, and detecting accidental or unauthorized data drift.
+
+The blockchain-style model is important here for four reasons:
+
+- Auditability: every ETL run is preserved instead of overwritten
+- Change detection: `sourceHash` shows whether a new run actually changed source content
+- Integrity: `blockHash` and `prevHash` make the chain tamper-evident
+- Replayability: balances and reports can be reconstructed from historical ledger entries
+
+The `TaxBilling` and `TaxPayment` nodes remain in the graph as compatibility projections for reporting. They are not the system of record. The append-only ledger is the system of record.
 
 ## Project layout
 
@@ -67,7 +90,7 @@ export Neo4jFinDBName="taxjc"
 
 ## Loading Jersey City tax data into Neo4j
 
-The ETL script expects `Account` nodes to already exist in Neo4j. It reads each `Account.Account` value, calls the new HLS property tax inquiry endpoint, updates account metadata, replaces that account's `TaxBilling` and `TaxPayment` history, and recreates the `BILL_FOR` and `PAYMENT_FOR` relationships.
+The ETL script expects `Account` nodes to already exist in Neo4j. It reads each `Account.Account` value, calls the HLS property tax inquiry endpoint, updates account metadata, appends one new `LedgerBlock` per ETL run and account, stores immutable `LedgerEntry` rows for the underlying source events, and refreshes the `TaxBilling`/`TaxPayment` projection for current reporting.
 
 Run it with:
 
@@ -92,10 +115,37 @@ Behavior to be aware of:
 - The script now runs only when executed as the main module.
 - It loads data from `https://apps.hlssystems.com/JerseyCity/PropertyTaxInquiry/GetAccountDetails`.
 - The request is keyed by account number and includes an `interestThruDate` parameter.
-- The ETL writes bill rows into `TaxBilling` and payment rows into `TaxPayment`.
+- Every ETL run generates a `runId` and appends a distinct `LedgerBlock` per account.
+- `LedgerBlock.sourceHash` captures whether the HLS source snapshot changed between runs.
+- `LedgerBlock.blockHash` and `LedgerBlock.prevHash` support chain verification.
+- `LedgerEntry` stores immutable bill and payment events for each block.
+- The ETL still writes the latest bill rows into `TaxBilling` and payment rows into `TaxPayment` for compatibility.
 - The ETL refreshes account metadata such as `accountId`, `address`, `ownerName`, `propertyLocation`, `principal`, `interest`, and `totalDue`.
 - The split between `TaxBilling` and `TaxPayment` is classification-based, so the billing/payment rule in the ETL should be kept in sync with the HLS source semantics.
+- The append-only ledger is the system of record; `TaxBilling` and `TaxPayment` are derived projections.
 - The packaged CLI supports `--accounts` for comma-separated partial refreshes and `--database` to override the target database.
+
+## Ledger Verification
+
+Use the verifier after ETL runs to confirm that the blockchain-style ledger chain is still consistent:
+
+```bash
+jctaxledger-verify-ledger --database taxjc
+```
+
+from the repo checkout without installing:
+
+```bash
+bin/jctaxledger-verify-ledger.sh --database taxjc
+```
+
+The verifier checks:
+
+- contiguous `blockHeight` values per account
+- `PREVIOUS_BLOCK` links to the expected prior block
+- `prevHash` matches the prior block's `blockHash`
+- `entryCount` matches the actual number of `LedgerEntry` links
+- stored `blockHash` matches the recomputed value
 
 ## Packaging
 
@@ -107,10 +157,10 @@ python -m build
 
 This produces:
 
-- `dist/jctaxledger-0.6.0.tar.gz`
-- `dist/jctaxledger-0.6.0-py3-none-any.whl`
+- `dist/jctaxledger-0.7.0.tar.gz`
+- `dist/jctaxledger-0.7.0-py3-none-any.whl`
 
-Release notes for this milestone are in [`RELEASE_NOTES_v0.6.0.md`](RELEASE_NOTES_v0.6.0.md).
+Release notes for this milestone are in [`RELEASE_NOTES_v0.7.0.md`](RELEASE_NOTES_v0.7.0.md).
 
 ## Skills
 
@@ -122,7 +172,7 @@ The repo includes local skills under [`skills/`](skills/):
 These skills are meant to be used by an agent on behalf of the account owner.
 
 - Use `taxjc-etl` when the owner wants to refresh or validate tax history in Neo4j.
-- Use `taxjc-reporting` when the owner wants account-level summaries, balances, year-over-year comparisons, tax ledger reports, or other reporting built from `Account`, `TaxBilling`, and `TaxPayment`.
+- Use `taxjc-reporting` when the owner wants account-level summaries, balances, year-over-year comparisons, tax ledger reports, or run-to-run blockchain-style ledger comparisons built from `Account`, `TaxBilling`, `TaxPayment`, `LedgerBlock`, and `LedgerEntry`.
 
 As the project grows, additional skills can cover reminders, alerts, owner-facing summaries, and recurring tax monitoring workflows.
 
@@ -131,6 +181,17 @@ Supporting query examples live in:
 - [`skills/taxjc-reporting/references/report-queries.md`](skills/taxjc-reporting/references/report-queries.md)
 
 That reference now includes ledger-oriented queries for comparing consecutive `LedgerBlock` runs by account and checking whether the latest ETL run changed the underlying source snapshot.
+
+## Documentation Workflow
+
+For this project, architecture and major logic changes are not complete until the docs are updated too.
+
+At minimum:
+
+- update `README.md` when the top-level architecture, ledger model, CLI surface, or workflow changes
+- update `README4ETL.md` when the ETL flow, data model, verification process, or operational behavior changes
+
+This rule is especially important for ledger, blockchain-style, schema, and reporting-model changes, because stale documentation makes verification and maintenance much harder.
 
 ## Tax Ledger Report
 
@@ -162,18 +223,20 @@ Recommended report sections:
 
 - account or address
 - reporting period
+- ledger run or block context where relevant
 - total billed
 - total paid
 - net balance
 - year-over-year increase where applicable
 - detailed billing rows
 - detailed payment rows
+- source-change status between consecutive ledger runs where applicable
 
 ## Current limitations
 
-- There is no packaged environment definition yet (`requirements.txt`, `pyproject.toml`, or lockfile).
 - There are no automated tests in the repository.
 - The repository currently includes generated `__pycache__` content in the working tree.
+- Current financial reporting still reads mainly from `TaxBilling` and `TaxPayment`; the ledger is the system of record, but not all reports are ledger-native yet.
 
 ## License
 
