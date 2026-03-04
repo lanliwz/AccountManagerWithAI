@@ -2,7 +2,7 @@
 
 JCTaxLedger is a Jersey City property tax ETL, reporting, and blockchain-style ledger project backed by Neo4j.
 
-Current milestone release: `v0.7.0`
+Current milestone release: `v1.0.0`
 
 ## Purpose
 
@@ -72,10 +72,10 @@ Install from a local checkout:
 python -m pip install .
 ```
 
-Install from the rebuilt `v0.7.0` wheel:
+Install from the rebuilt `v1.0.0` wheel:
 
 ```bash
-python -m pip install --upgrade dist/jctaxledger-0.7.0-py3-none-any.whl
+python -m pip install --upgrade dist/jctaxledger-1.0.0-py3-none-any.whl
 ```
 
 If a newly added CLI command is not found in your shell, reinstall the package so the new console script entry points are registered:
@@ -217,10 +217,10 @@ python -m build --no-isolation
 
 This produces:
 
-- `dist/jctaxledger-0.7.0.tar.gz`
-- `dist/jctaxledger-0.7.0-py3-none-any.whl`
+- `dist/jctaxledger-1.0.0.tar.gz`
+- `dist/jctaxledger-1.0.0-py3-none-any.whl`
 
-Release notes for this milestone are in [`RELEASE_NOTES_v0.7.0.md`](RELEASE_NOTES_v0.7.0.md).
+Release notes for this milestone are in [`RELEASE_NOTES_v1.0.0.md`](RELEASE_NOTES_v1.0.0.md).
 
 ## Skills
 

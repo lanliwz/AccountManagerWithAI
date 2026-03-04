@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: jctaxledger
-Version: 0.7.0
+Version: 1.0.0
 Summary: Jersey City property tax ETL and Neo4j reporting utilities.
 Author: Wei Zhang
 License: Apache-2.0
@@ -14,7 +14,7 @@ Requires-Dist: requests>=2.31
 
 JCTaxLedger is a Jersey City property tax ETL, reporting, and blockchain-style ledger project backed by Neo4j.
 
-Current milestone release: `v0.7.0`
+Current milestone release: `v1.0.0`
 
 ## Purpose
 
@@ -77,10 +77,23 @@ The `TaxBilling` and `TaxPayment` nodes remain in the graph as compatibility pro
 
 - Python 3.10+ recommended
 - A running Neo4j database populated with `Account` nodes
+
 Install from a local checkout:
 
 ```bash
 python -m pip install .
+```
+
+Install from the rebuilt `v1.0.0` wheel:
+
+```bash
+python -m pip install --upgrade dist/jctaxledger-1.0.0-py3-none-any.whl
+```
+
+If a newly added CLI command is not found in your shell, reinstall the package so the new console script entry points are registered:
+
+```bash
+python -m pip install --upgrade .
 ```
 
 If you want dependency-only installation without packaging:
@@ -178,7 +191,7 @@ bin/jctaxledger-diff-ledger.sh --database taxjc
 Specific accounts:
 
 ```bash
-jctaxledger-diff-ledger --database taxjc --accounts 556886,599600
+jctaxledger-diff-ledger --database taxjc --accounts 123456,234567
 ```
 
 Specific block pair:
@@ -208,12 +221,18 @@ Build release artifacts locally with:
 python -m build
 ```
 
+If isolated builds cannot download dependencies in a restricted environment, use the local toolchain instead:
+
+```bash
+python -m build --no-isolation
+```
+
 This produces:
 
-- `dist/jctaxledger-0.7.0.tar.gz`
-- `dist/jctaxledger-0.7.0-py3-none-any.whl`
+- `dist/jctaxledger-1.0.0.tar.gz`
+- `dist/jctaxledger-1.0.0-py3-none-any.whl`
 
-Release notes for this milestone are in [`RELEASE_NOTES_v0.7.0.md`](RELEASE_NOTES_v0.7.0.md).
+Release notes for this milestone are in [`RELEASE_NOTES_v1.0.0.md`](RELEASE_NOTES_v1.0.0.md).
 
 ## Skills
 
@@ -243,6 +262,7 @@ At minimum:
 
 - update `README.md` when the top-level architecture, ledger model, CLI surface, or workflow changes
 - update `README4ETL.md` when the ETL flow, data model, verification process, or operational behavior changes
+- do not use real account numbers, addresses, owner names, or other sensitive live examples in public-facing repo documents; use placeholders instead
 
 This rule is especially important for ledger, blockchain-style, schema, and reporting-model changes, because stale documentation makes verification and maintenance much harder.
 
