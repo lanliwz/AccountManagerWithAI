@@ -1,3 +1,6 @@
+import hashlib
+import json
+
 from neo4j import GraphDatabase
 
 class FinGraphDB:
@@ -41,6 +44,19 @@ class FinGraphDB:
                     "PAYMENT_FOR",
                     payment_rows,
                 )
+
+    def append_account_ledger(self, account_properties, ledger_block, ledger_entries):
+        with self._driver.session() as session:
+            session.execute_write(
+                self._upsert_account,
+                account_properties,
+            )
+            session.execute_write(
+                self._append_account_ledger,
+                account_properties["Account"],
+                ledger_block,
+                ledger_entries,
+            )
 
     def get_account_number(self):
         with self._driver.session() as session:
@@ -151,3 +167,92 @@ class FinGraphDB:
             return
 
         raise ValueError(f"Unsupported tax row target: {node_label}/{relationship_type}")
+
+    @staticmethod
+    def _append_account_ledger(tx, account_number, ledger_block, ledger_entries):
+        existing_block = tx.run(
+            """
+            MATCH (b:LedgerBlock {blockId: $blockId})
+            RETURN b.blockId AS blockId
+            """,
+            blockId=ledger_block["blockId"],
+        ).single()
+
+        previous_tip = None
+        if existing_block is None:
+            previous_tip = tx.run(
+                """
+                MATCH (a:Account {Account: $Account})
+                OPTIONAL MATCH (tip:LedgerBlock)-[:LEDGER_FOR]->(a)
+                WHERE NOT EXISTS { MATCH (:LedgerBlock)-[:PREVIOUS_BLOCK]->(tip) }
+                RETURN tip.blockId AS blockId,
+                       tip.blockHash AS blockHash,
+                       coalesce(tip.blockHeight, -1) AS blockHeight
+                LIMIT 1
+                """,
+                Account=account_number,
+            ).single()
+
+        previous_hash = previous_tip["blockHash"] if previous_tip and previous_tip["blockId"] else None
+        block_height = (
+            previous_tip["blockHeight"] + 1 if previous_tip and previous_tip["blockId"] else 0
+        )
+        block_hash = hashlib.sha1(
+            json.dumps(
+                {
+                    "blockId": ledger_block["blockId"],
+                    "prevHash": previous_hash,
+                    "sourceHash": ledger_block["sourceHash"],
+                    "blockHeight": block_height,
+                    "entryCount": ledger_block["entryCount"],
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+
+        block_properties = dict(ledger_block)
+        block_properties["prevHash"] = previous_hash
+        block_properties["blockHeight"] = block_height
+        block_properties["blockHash"] = block_hash
+
+        tx.run(
+            """
+            MERGE (b:LedgerBlock {blockId: $blockId})
+            ON CREATE SET b += $block_properties
+            WITH b
+            MATCH (a:Account {Account: $Account})
+            MERGE (b)-[:LEDGER_FOR]->(a)
+            """,
+            blockId=block_properties["blockId"],
+            block_properties=block_properties,
+            Account=account_number,
+        )
+
+        if previous_tip and previous_tip["blockId"]:
+            tx.run(
+                """
+                MATCH (b:LedgerBlock {blockId: $blockId})
+                MATCH (prev:LedgerBlock {blockId: $prevBlockId})
+                MERGE (b)-[:PREVIOUS_BLOCK]->(prev)
+                """,
+                blockId=block_properties["blockId"],
+                prevBlockId=previous_tip["blockId"],
+            )
+
+        if ledger_entries:
+            tx.run(
+                """
+                UNWIND $entries AS entry
+                MERGE (e:LedgerEntry {entryId: entry.entryId})
+                ON CREATE SET e += entry
+                WITH e, entry
+                MATCH (b:LedgerBlock {blockId: $blockId})
+                MERGE (b)-[:CONTAINS]->(e)
+                WITH e, entry
+                MATCH (a:Account {Account: entry.Account})
+                MERGE (e)-[:FOR_ACCOUNT]->(a)
+                """,
+                entries=ledger_entries,
+                blockId=block_properties["blockId"],
+            )

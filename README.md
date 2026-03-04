@@ -130,6 +130,8 @@ Supporting query examples live in:
 
 - [`skills/taxjc-reporting/references/report-queries.md`](skills/taxjc-reporting/references/report-queries.md)
 
+That reference now includes ledger-oriented queries for comparing consecutive `LedgerBlock` runs by account and checking whether the latest ETL run changed the underlying source snapshot.
+
 ## Tax Ledger Report
 
 To create a tax ledger report with the reporting skill:

@@ -1,6 +1,7 @@
 import argparse
 from datetime import datetime
 import os
+from uuid import uuid4
 
 import requests
 
@@ -15,12 +16,18 @@ except ImportError:
 
 try:
     from etl.jcTaxJson2node import (
+        build_ledger_block,
+        build_ledger_entries,
+        build_source_payload_hash,
         classify_tax_rows,
         normalize_account_properties,
         normalize_billing_rows,
     )
 except ImportError:
     from jcTaxJson2node import (
+        build_ledger_block,
+        build_ledger_entries,
+        build_source_payload_hash,
         classify_tax_rows,
         normalize_account_properties,
         normalize_billing_rows,
@@ -35,6 +42,14 @@ DEFAULT_DATABASE = "taxjc"
 def _format_interest_thru_date(target_date=None):
     date_value = target_date or datetime.now()
     return date_value.strftime("%a %b %d %Y")
+
+
+def _build_run_metadata():
+    loaded_at = datetime.utcnow().isoformat(timespec="seconds")
+    return {
+        "runId": f"{loaded_at}-{uuid4().hex[:12]}",
+        "loadedAt": loaded_at,
+    }
 
 
 def fetch_account_details(session, account_number, interest_thru_date=None):
@@ -103,6 +118,7 @@ def load2neo4j(accounts=None, database=DEFAULT_DATABASE):
             "Accept": "application/json",
         }
     )
+    run_metadata = _build_run_metadata()
 
     try:
         for account in accounts_to_load:
@@ -110,6 +126,26 @@ def load2neo4j(accounts=None, database=DEFAULT_DATABASE):
             account_properties = normalize_account_properties(account_details)
             tax_rows = normalize_billing_rows(account_details)
             billing_rows, payment_rows = classify_tax_rows(tax_rows)
+            source_payload_hash = build_source_payload_hash(account_details)
+            ledger_block = build_ledger_block(
+                account_properties,
+                source_payload_hash,
+                billing_rows,
+                payment_rows,
+                run_id=run_metadata["runId"],
+                loaded_at=run_metadata["loadedAt"],
+            )
+            ledger_entries = build_ledger_entries(
+                ledger_block["blockId"],
+                billing_rows,
+                payment_rows,
+                loaded_at=run_metadata["loadedAt"],
+            )
+            mydb.append_account_ledger(
+                account_properties,
+                ledger_block,
+                ledger_entries,
+            )
             mydb.replace_account_tax_history(
                 account_properties,
                 billing_rows,
@@ -118,7 +154,9 @@ def load2neo4j(accounts=None, database=DEFAULT_DATABASE):
             print(
                 f"Loaded account {account_properties['Account']} "
                 f"(accountId={account_properties['accountId']}) with "
-                f"{len(billing_rows)} billing rows and {len(payment_rows)} payment rows"
+                f"{len(billing_rows)} billing rows, {len(payment_rows)} payment rows, "
+                f"ledger block {ledger_block['blockId']} "
+                f"(runId={ledger_block['runId']})"
             )
     finally:
         session.close()

@@ -19,6 +19,7 @@ dependencies = [
 
 [project.scripts]
 jctaxledger-etl = "etl.jcTaxEtl:main"
+jctaxledger-verify-ledger = "etl.verifyLedgerChain:main"
 
 [tool.setuptools]
 include-package-data = false

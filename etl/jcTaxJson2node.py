@@ -73,6 +73,12 @@ def _build_source_id(account_number, detail):
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()
 
 
+def _sha1_payload(payload):
+    return hashlib.sha1(
+        json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    ).hexdigest()
+
+
 def normalize_billing_rows(account_details):
     account_number = int(account_details["AccountNumber"])
     account_id = int(account_details["AccountId"])
@@ -119,6 +125,26 @@ def normalize_billing_rows(account_details):
     return rows
 
 
+def build_source_payload_hash(account_details):
+    return _sha1_payload(account_details)
+
+
+def _build_ledger_event_payloads(billing_rows, payment_rows):
+    event_payloads = []
+
+    for event_type, rows in (("BILL", billing_rows), ("PAYMENT", payment_rows)):
+        for ordinal, row in enumerate(rows, start=1):
+            event_payloads.append(
+                {
+                    "eventType": event_type,
+                    "ordinal": ordinal,
+                    "row": row,
+                }
+            )
+
+    return event_payloads
+
+
 def classify_tax_rows(rows):
     billing_rows = []
     payment_rows = []
@@ -133,3 +159,70 @@ def classify_tax_rows(rows):
             payment_rows.append(row)
 
     return billing_rows, payment_rows
+
+
+def build_ledger_block(
+    account_properties,
+    source_payload_hash,
+    billing_rows,
+    payment_rows,
+    run_id,
+    loaded_at=None,
+):
+    created_at = loaded_at or datetime.utcnow().isoformat(timespec="seconds")
+    account_number = int(account_properties["Account"])
+    event_payloads = _build_ledger_event_payloads(billing_rows, payment_rows)
+    entry_hashes = [_sha1_payload(payload) for payload in event_payloads]
+    block_fingerprint = {
+        "Account": account_number,
+        "accountId": account_properties.get("accountId"),
+        "runId": run_id,
+        "loadedAt": created_at,
+        "sourceHash": source_payload_hash,
+        "entryHashes": entry_hashes,
+    }
+    block_id = _sha1_payload(block_fingerprint)
+
+    return {
+        "blockId": block_id,
+        "Account": account_number,
+        "accountId": account_properties.get("accountId"),
+        "chainScope": "ACCOUNT",
+        "sourceSystem": "JerseyCityHLS",
+        "runId": run_id,
+        "sourceHash": source_payload_hash,
+        "entryCount": len(entry_hashes),
+        "createdAt": created_at,
+        "ledgerVersion": 1,
+    }
+
+
+def build_ledger_entries(block_id, billing_rows, payment_rows, loaded_at=None):
+    created_at = loaded_at or datetime.utcnow().isoformat(timespec="seconds")
+    entries = []
+
+    for event_payload in _build_ledger_event_payloads(billing_rows, payment_rows):
+        canonical_payload = {
+            "blockId": block_id,
+            **event_payload,
+        }
+        row = event_payload["row"]
+        event_type = event_payload["eventType"]
+        ordinal = event_payload["ordinal"]
+        entry_hash = _sha1_payload(canonical_payload)
+        entry = dict(row)
+        entry.update(
+            {
+                "entryId": entry_hash,
+                "entryHash": entry_hash,
+                "blockId": block_id,
+                "eventType": event_type,
+                "ordinal": ordinal,
+                "createdAt": created_at,
+                "sourceId": row["sourceId"],
+                "ledgerVersion": 1,
+            }
+        )
+        entries.append(entry)
+
+    return entries
