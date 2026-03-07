@@ -1,0 +1,116 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="80" x2="1460" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1220"/>
+      <stop offset="0.45" stop-color="#132238"/>
+      <stop offset="1" stop-color="#071018"/>
+    </linearGradient>
+    <linearGradient id="card" x1="280" y1="190" x2="1320" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#13263A"/>
+      <stop offset="1" stop-color="#0E1C2B"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="337" y1="251" x2="1223" y2="662" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#19D3A2"/>
+      <stop offset="1" stop-color="#65A9FF"/>
+    </linearGradient>
+    <linearGradient id="chain" x1="930" y1="260" x2="1330" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1AE0A8"/>
+      <stop offset="1" stop-color="#7EC5FF"/>
+    </linearGradient>
+    <filter id="blur" x="0" y="0" width="1600" height="900" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+    <filter id="shadow" x="216" y="116" width="1168" height="628" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feOffset dy="18"/>
+      <feGaussianBlur stdDeviation="22"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0101961 0 0 0 0 0.0470588 0 0 0 0 0.0941176 0 0 0 0.38 0"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+
+  <g filter="url(#blur)" opacity="0.55">
+    <circle cx="250" cy="180" r="150" fill="#1AE0A8"/>
+    <circle cx="1370" cy="730" r="170" fill="#297CFF"/>
+    <circle cx="1180" cy="210" r="120" fill="#17C7D1"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="282" y="178" width="1036" height="496" rx="28" fill="url(#card)"/>
+    <rect x="282.75" y="178.75" width="1034.5" height="494.5" rx="27.25" stroke="rgba(255,255,255,0.08)"/>
+  </g>
+
+  <g opacity="0.45">
+    <line x1="960" y1="348" x2="1088" y2="302" stroke="url(#chain)" stroke-width="4"/>
+    <line x1="1088" y1="302" x2="1218" y2="356" stroke="url(#chain)" stroke-width="4"/>
+    <line x1="960" y1="348" x2="1092" y2="442" stroke="url(#chain)" stroke-width="4"/>
+    <line x1="1092" y1="442" x2="1218" y2="356" stroke="url(#chain)" stroke-width="4"/>
+    <line x1="1092" y1="442" x2="1248" y2="520" stroke="url(#chain)" stroke-width="4"/>
+    <line x1="960" y1="348" x2="930" y2="520" stroke="url(#chain)" stroke-width="4"/>
+    <line x1="930" y1="520" x2="1092" y2="442" stroke="url(#chain)" stroke-width="4"/>
+  </g>
+
+  <g opacity="0.72">
+    <rect x="893" y="296" width="138" height="104" rx="18" fill="#0E1825"/>
+    <rect x="893.75" y="296.75" width="136.5" height="102.5" rx="17.25" stroke="#2BE4AF" stroke-opacity="0.65" stroke-width="1.5"/>
+    <text x="918" y="328" fill="#8DEBC9" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700">LEDGER BLOCK</text>
+    <text x="918" y="356" fill="#DCEBFF" font-family="Helvetica, Arial, sans-serif" font-size="14">runId</text>
+    <text x="918" y="378" fill="#DCEBFF" font-family="Helvetica, Arial, sans-serif" font-size="14">sourceHash</text>
+  </g>
+
+  <g opacity="0.68">
+    <rect x="1032" y="248" width="114" height="92" rx="16" fill="#101B2A"/>
+    <rect x="1032.75" y="248.75" width="112.5" height="90.5" rx="15.25" stroke="#6DC4FF" stroke-opacity="0.72" stroke-width="1.5"/>
+    <text x="1051" y="280" fill="#DCEBFF" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700">ENTRY</text>
+    <text x="1051" y="308" fill="#9AB4C8" font-family="Helvetica, Arial, sans-serif" font-size="13">sourceId</text>
+  </g>
+
+  <g opacity="0.68">
+    <rect x="1162" y="308" width="114" height="92" rx="16" fill="#101B2A"/>
+    <rect x="1162.75" y="308.75" width="112.5" height="90.5" rx="15.25" stroke="#6DC4FF" stroke-opacity="0.72" stroke-width="1.5"/>
+    <text x="1181" y="340" fill="#DCEBFF" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700">ACCOUNT</text>
+    <text x="1181" y="368" fill="#9AB4C8" font-family="Helvetica, Arial, sans-serif" font-size="13">tax history</text>
+  </g>
+
+  <g opacity="0.68">
+    <rect x="1036" y="398" width="112" height="90" rx="16" fill="#101B2A"/>
+    <rect x="1036.75" y="398.75" width="110.5" height="88.5" rx="15.25" stroke="#6DC4FF" stroke-opacity="0.72" stroke-width="1.5"/>
+    <text x="1054" y="429" fill="#DCEBFF" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700">VERIFY</text>
+    <text x="1054" y="457" fill="#9AB4C8" font-family="Helvetica, Arial, sans-serif" font-size="13">blockHash</text>
+  </g>
+
+  <g opacity="0.68">
+    <rect x="1192" y="476" width="112" height="90" rx="16" fill="#101B2A"/>
+    <rect x="1192.75" y="476.75" width="110.5" height="88.5" rx="15.25" stroke="#6DC4FF" stroke-opacity="0.72" stroke-width="1.5"/>
+    <text x="1211" y="507" fill="#DCEBFF" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700">DIFF</text>
+    <text x="1211" y="535" fill="#9AB4C8" font-family="Helvetica, Arial, sans-serif" font-size="13">snapshots</text>
+  </g>
+
+  <g opacity="0.6">
+    <circle cx="930" cy="520" r="20" fill="#0E1825" stroke="#2BE4AF" stroke-width="2"/>
+    <text x="920" y="526" fill="#D7FFF0" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700">B1</text>
+    <circle cx="860" cy="618" r="13" fill="#162333"/>
+    <circle cx="895" cy="618" r="13" fill="#162333"/>
+    <circle cx="930" cy="618" r="13" fill="#162333"/>
+    <circle cx="965" cy="618" r="13" fill="#162333"/>
+    <circle cx="1000" cy="618" r="13" fill="#162333"/>
+  </g>
+
+  <g>
+    <rect x="318" y="220" width="430" height="328" rx="32" fill="#0B1320" fill-opacity="0.78"/>
+    <rect x="318.75" y="220.75" width="428.5" height="326.5" rx="31.25" stroke="rgba(255,255,255,0.10)" stroke-width="1.5"/>
+    <rect x="334" y="236" width="214" height="38" rx="19" fill="rgba(25,211,162,0.18)"/>
+    <text x="364" y="261" fill="#A5F3D7" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="1.8">JCTAXLEDGER v1.0.0</text>
+    <text x="334" y="352" fill="#F8FCFF" font-family="Helvetica, Arial, sans-serif" font-size="76" font-weight="700">
+      <tspan x="334" dy="0">Blockchain-Based</tspan>
+      <tspan x="334" dy="88">Ledger in Neo4j</tspan>
+    </text>
+    <text x="338" y="518" fill="#B6CADD" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="400">
+      <tspan x="338" dy="0">Append-only ledger blocks, graph-linked entries,</tspan>
+      <tspan x="338" dy="42">snapshot diffing, and verifiable tax history.</tspan>
+    </text>
+  </g>
+
+  <path d="M334 602H719" stroke="url(#accent)" stroke-width="6" stroke-linecap="round"/>
+  <text x="334" y="648" fill="#CFE2F2" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="600">LinkedIn article cover</text>
+</svg>

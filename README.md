@@ -2,7 +2,22 @@
 
 JCTaxLedger is a Jersey City property tax ETL, reporting, and blockchain-style ledger project backed by Neo4j.
 
-Current milestone release: `v1.0.0`
+![JCTaxLedger front page](frontpage.svg)
+
+It is designed as a publication-friendly visual for the project's blockchain-style ledger theme and can be reused for:
+
+- article covers
+- LinkedIn posts
+- presentation front pages
+- project overview visuals
+
+The SVG emphasizes:
+
+- a foreground-first title treatment for article-cover readability
+- append-only `LedgerBlock` and `LedgerEntry` structure
+- Neo4j-style graph relationships
+- verification and snapshot diff workflow
+- the `JCTaxLedger` branding and `v1.0.0` milestone
 
 ## Purpose
 
